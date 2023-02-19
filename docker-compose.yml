@@ -33,6 +33,7 @@ services:
       - elk
     depends_on:
       - elasticsearch
+    container_name: setup
 
   elasticsearch:
     build:
@@ -58,6 +59,7 @@ services:
     networks:
       - elk
     restart: unless-stopped
+    container_name: elasticsearch
 
   logstash:
     build:
@@ -80,6 +82,7 @@ services:
     depends_on:
       - elasticsearch
     restart: unless-stopped
+    container_name: logstash
 
   kibana:
     build:
@@ -97,6 +100,45 @@ services:
     depends_on:
       - elasticsearch
     restart: unless-stopped
+    container_name: kibana
+
+  apm-server:
+    build:
+      context: apm/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    ports:
+      - 8200:8200
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=true
+        -E setup.kibana.host=kibana:5601
+        -E setup.template.settings.index.number_of_replicas=0
+        -E apm-server.kibana.enabled=true
+        -E apm-server.kibana.host=kibana:5601
+        -E output.elasticsearch.hosts=["elasticsearch:9200"]
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    logging:
+      driver: 'json-file'
+      options:
+          max-size: '2m'
+          max-file: '5'
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD", "curl", "--write-out", "'HTTP %{http_code}'", "--silent", "--output", "/dev/null", "http://apm-server:8200/healthcheck"]
+      retries: 10
+      interval: 10s
+    networks:
+      - elk
+    restart: unless-stopped
+    container_name: apm-server
 
 networks:
   elk:
