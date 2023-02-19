@@ -109,14 +109,6 @@ services:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     ports:
       - 8200:8200
-    command: >
-      apm-server -e
-        -E apm-server.rum.enabled=true
-        -E setup.kibana.host=kibana:5601
-        -E setup.template.settings.index.number_of_replicas=0
-        -E apm-server.kibana.enabled=true
-        -E apm-server.kibana.host=kibana:5601
-        -E output.elasticsearch.hosts=["elasticsearch:9200"]
     cap_drop:
       - ALL
     cap_add:
@@ -130,7 +122,10 @@ services:
           max-size: '2m'
           max-file: '5'
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "--write-out", "'HTTP %{http_code}'", "--silent", "--output", "/dev/null", "http://apm-server:8200/healthcheck"]
       retries: 10
