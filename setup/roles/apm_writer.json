@@ -1,0 +1,30 @@
+{
+  "cluster": [
+    "manage_index_templates",
+    "monitor",
+    "manage_ilm",
+    "read_pipeline"
+  ],
+  "indices": [
+    {
+      "names": [
+        "traces-apm*",
+        "logs-apm*",
+        "metrics-apm*"
+      ],
+      "privileges": [
+        "auto_configure"
+      ]
+    },
+    {
+      "names": [
+        "traces-apm*",
+        "logs-apm*",
+        "metrics-apm*"
+      ],
+      "privileges": [
+        "create_doc"
+      ]
+    }
+  ]
+}

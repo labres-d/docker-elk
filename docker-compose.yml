@@ -23,6 +23,7 @@ services:
     environment:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
       LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
+      APM_INTERNAL_PASSWORD: ${APM_INTERNAL_PASSWORD:-}
       KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:-}
       METRICBEAT_INTERNAL_PASSWORD: ${METRICBEAT_INTERNAL_PASSWORD:-}
       FILEBEAT_INTERNAL_PASSWORD: ${FILEBEAT_INTERNAL_PASSWORD:-}
@@ -107,33 +108,31 @@ services:
       context: apm/
       args:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
+    cap_add: [ "CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID" ]
+    cap_drop: [ "ALL" ]
     ports:
       - 8200:8200
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - DAC_OVERRIDE
-      - SETGID
-      - SETUID
-    logging:
-      driver: 'json-file'
-      options:
-          max-size: '2m'
-          max-file: '5'
     depends_on:
-      elasticsearch:
-        condition: service_healthy
-      kibana:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "--write-out", "'HTTP %{http_code}'", "--silent", "--output", "/dev/null", "http://apm-server:8200/healthcheck"]
-      retries: 10
-      interval: 10s
+      - elasticsearch
+    networks:
+      - elk
+    container_name: apm-server
+
+  elastic-agent:
+    build:
+      context: beats/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    environment:
+      - FLEET_ENROLL=1
+      - FLEET_URL=https://kibana:8220
+      - FLEET_SERVER_ENABLE=true
+      - FLEET_SERVER_ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - FLEET_SERVER_SERVICE_TOKEN=AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE2NzY5NDUzMDYzMzM6aXplU01jLXVTT2laTEd0MVk3bXJ2QQ
     networks:
       - elk
     restart: unless-stopped
-    container_name: apm-server
+    container_name: elastic-agent
 
 networks:
   elk:
